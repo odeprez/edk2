@@ -704,6 +704,9 @@
   ## Include/Protocol/UsbEthernetProtocol.h
   gEdkIIUsbEthProtocolGuid = { 0x8d8969cc, 0xfeb0, 0x4303, { 0xb2, 0x1a, 0x1f, 0x11, 0x6f, 0x38, 0x56, 0x43 } }
 
+  ## Arm Platform HEST table generation protocol
+  gHestTableProtocolGuid = { 0x705bdcd9, 0x8c47, 0x457e, { 0xad, 0x0d, 0xf7, 0x86, 0xf3, 0x4a, 0x0d, 0x63 } }
+
 [PcdsFeatureFlag]
   ## Indicates if the platform can support update capsule across a system reset.<BR><BR>
   #   TRUE  - Supports update capsule across a system reset.<BR>
