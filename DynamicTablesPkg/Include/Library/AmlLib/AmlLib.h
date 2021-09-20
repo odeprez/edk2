@@ -523,11 +523,11 @@ AmlUpdateRdInterrupt (
   IN  UINT32                Irq
   );
 
-/** Update the base address and length of a QWord resource data node.
+/** Update the base address and length of a DWord resource data node.
 
   @ingroup UserApis
 
-  @param  [in] QWordRdNode         Pointer a QWord resource data
+  @param  [in] DWordRdNode         Pointer a DWord resource data
                                    node.
   @param  [in] BaseAddress         Base address.
   @param  [in] BaseAddressLength   Base address length.
@@ -538,10 +538,54 @@ AmlUpdateRdInterrupt (
 **/
 EFI_STATUS
 EFIAPI
+AmlUpdateRdDWord (
+  IN  AML_DATA_NODE_HANDLE  DWordRdNode,
+  IN  UINT32                BaseAddress,
+  IN  UINT32                BaseAddressLength
+  );
+
+/** Update the base address and length of a Word resource data node.
+
+  @ingroup UserApis
+
+  @param  [in] WordRdNode          Pointer a Word resource data
+                                   node.
+  @param  [in] BaseAddress         Base address.
+  @param  [in] BaseAddressLength   Base address length.
+
+  @retval  EFI_SUCCESS            The function completed successfully.
+  @retval  EFI_INVALID_PARAMETER  Invalid parameter.
+  @retval  EFI_OUT_OF_RESOURCES   Out of resources.
+**/
+EFI_STATUS
+EFIAPI
+AmlUpdateRdWord (
+  IN  AML_DATA_NODE_HANDLE  WordRdNode,
+  IN  UINT16                BaseAddress,
+  IN  UINT16                BaseAddressLength
+  );
+
+/** Update the base address and length of a QWord resource data node.
+
+  @ingroup UserApis
+
+  @param  [in] QWordRdNode           Pointer a QWord resource data
+                                     node.
+  @param  [in] BaseAddress           Base address.
+  @param  [in] BaseAddressLength     Base address length.
+  @param  [in] AddrTranslationOffset Address translation offset.
+
+  @retval  EFI_SUCCESS            The function completed successfully.
+  @retval  EFI_INVALID_PARAMETER  Invalid parameter.
+  @retval  EFI_OUT_OF_RESOURCES   Out of resources.
+**/
+EFI_STATUS
+EFIAPI
 AmlUpdateRdQWord (
   IN  AML_DATA_NODE_HANDLE  QWordRdNode,
   IN  UINT64                BaseAddress,
-  IN  UINT64                BaseAddressLength
+  IN  UINT64                BaseAddressLength,
+  IN  UINT64                AddrTranslationOffset
   );
 
 /** Code generation for the "DWordIO ()" ASL function.

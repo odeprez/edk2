@@ -305,7 +305,8 @@ FixupCmn600Info (
   Status = AmlUpdateRdQWord (
              CmnPeriphBaseRdNode,
              Cmn600Info->PeriphBaseAddress,
-             Cmn600Info->PeriphBaseAddressLength
+             Cmn600Info->PeriphBaseAddressLength,
+             0
              );
   if (EFI_ERROR (Status)) {
     goto error_handler;
@@ -331,7 +332,8 @@ FixupCmn600Info (
   Status = AmlUpdateRdQWord (
              CmnRootNodeBaseRdNode,
              Cmn600Info->RootNodeBaseAddress,
-             ROOTNODEBASE_ADDRESS_LENGTH
+             ROOTNODEBASE_ADDRESS_LENGTH,
+             0
              );
   if (EFI_ERROR (Status)) {
     goto error_handler;

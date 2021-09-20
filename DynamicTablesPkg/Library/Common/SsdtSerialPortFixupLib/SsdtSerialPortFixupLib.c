@@ -297,7 +297,8 @@ FixupCrs (
              QWordRdNode,
              SerialPortInfo->BaseAddress,
              ((SerialPortInfo->BaseAddressLength < MIN_UART_ADDRESS_LENGTH) ?
-              MIN_UART_ADDRESS_LENGTH : SerialPortInfo->BaseAddressLength)
+              MIN_UART_ADDRESS_LENGTH : SerialPortInfo->BaseAddressLength),
+             0
              );
   if (EFI_ERROR (Status)) {
     return Status;
