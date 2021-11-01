@@ -25,6 +25,7 @@
   Arm/StandaloneMmCoreEntryPoint.c
   Arm/SetPermissions.c
   Arm/CreateHobList.c
+  Arm/AArch64/ModuleEntryPoint.S
 
 [Sources.X64]
   X64/StandaloneMmCoreEntryPoint.c

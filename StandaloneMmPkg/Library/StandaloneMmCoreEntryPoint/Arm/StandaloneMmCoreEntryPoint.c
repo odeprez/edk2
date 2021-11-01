@@ -316,7 +316,7 @@ InitArmSvcArgs (
 **/
 VOID
 EFIAPI
-_ModuleEntryPoint (
+ModuleEntryPoint (
   IN VOID    *SharedBufAddress,
   IN UINT64  SharedBufSize,
   IN UINT64  cookie1,
