@@ -203,3 +203,187 @@ CreateHobListFromBootInfo (
 
   return HobStart;
 }
+
+STATIC
+VOID
+CreateMmramInformationHobFromImageLayout (
+  IN       EFI_STMM_BOOT_INFO              *StmmBootInfo,
+  IN       EFI_HOB_HANDOFF_INFO_TABLE      *HobStart
+)
+{
+  UINT32                          *Idx;
+  UINT32                          BufferSize;
+  EFI_MMRAM_HOB_DESCRIPTOR_BLOCK  *MmramRangesHob;
+  EFI_MMRAM_DESCRIPTOR            *MmramRanges;
+
+  // Find the size of the GUIDed HOB with SRAM ranges. This excludes any memory
+  // shared with the normal world or the SPMC. It includes the memory allocated
+  // to the SP image, used and unused heap.
+  BufferSize = sizeof (EFI_MMRAM_HOB_DESCRIPTOR_BLOCK);
+  BufferSize += 4 * sizeof (EFI_MMRAM_DESCRIPTOR);
+
+  // Create a GUIDed HOB with SRAM ranges
+  MmramRangesHob = BuildGuidHob (&gEfiMmPeiMmramMemoryReserveGuid, BufferSize);
+
+  // Initialise the number of MMRAM memory regions
+  MmramRangesHob->NumberOfMmReservedRegions = 0;
+  Idx = &MmramRangesHob->NumberOfMmReservedRegions ;
+
+  // Fill up the MMRAM ranges
+  MmramRanges = &MmramRangesHob->Descriptor[0];
+
+  // Base and size of memory occupied by the Standalone MM image
+  MmramRanges[*Idx].PhysicalStart = StmmBootInfo->SpMemBase;
+  MmramRanges[*Idx].CpuStart      = StmmBootInfo->SpMemBase;
+  MmramRanges[*Idx].PhysicalSize  = StmmBootInfo->SpMemSize;
+  MmramRanges[*Idx].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  (*Idx)++;
+
+  // Base and size of memory occupied by the Standalone MM image
+  MmramRanges[*Idx].PhysicalStart = StmmBootInfo->SpSharedBufBase;
+  MmramRanges[*Idx].CpuStart      = StmmBootInfo->SpSharedBufBase;
+  MmramRanges[*Idx].PhysicalSize  = StmmBootInfo->SpSharedBufSize;
+  MmramRanges[*Idx].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  (*Idx)++;
+
+  // Base and size of memory occupied by the hoblist
+  MmramRanges[*Idx].PhysicalStart = (EFI_PHYSICAL_ADDRESS) (UINTN) HobStart;
+  MmramRanges[*Idx].CpuStart      = (EFI_PHYSICAL_ADDRESS) (UINTN) HobStart;
+  MmramRanges[*Idx].PhysicalSize  = HobStart->EfiFreeMemoryBottom - (EFI_PHYSICAL_ADDRESS) (UINTN) HobStart;
+  MmramRanges[*Idx].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  (*Idx)++;
+
+  // Base and size of heap memory shared by all cpus
+  MmramRanges[*Idx].PhysicalStart = HobStart->EfiFreeMemoryBottom;
+  MmramRanges[*Idx].CpuStart      = HobStart->EfiFreeMemoryBottom;
+  MmramRanges[*Idx].PhysicalSize  = HobStart->EfiFreeMemoryTop - HobStart->EfiFreeMemoryBottom;
+  MmramRanges[*Idx].RegionState   = EFI_CACHEABLE;
+  (*Idx)++;
+
+  // Sanity check number of MMRAM regions
+  ASSERT (MmramRangesHob->NumberOfMmReservedRegions == 3);
+
+  return;
+}
+
+STATIC
+VOID
+CreateMpInformationHobFromCpuInfo (
+  IN       EFI_SECURE_PARTITION_CPU_INFO     *CpuInfo
+)
+{
+  MP_INFORMATION_HOB_DATA         *MpInformationHobData;
+  EFI_PROCESSOR_INFORMATION       *ProcInfoBuffer;
+  UINT32                          BufferSize;
+  UINT32                          Flags;
+
+  // Find the size of the GUIDed HOB with MP information
+  BufferSize = sizeof (MP_INFORMATION_HOB_DATA);
+  BufferSize += sizeof (EFI_PROCESSOR_INFORMATION);
+
+  // Create a Guided MP information HOB to enable the ARM TF CPU driver to
+  // perform per-cpu allocations.
+  MpInformationHobData = BuildGuidHob (&gMpInformationHobGuid, BufferSize);
+
+  // Populate the MP information HOB under the assumption that this is a
+  // uniprocessor partition. Hence, only a single CPU is exposed to the MM Core.
+  MpInformationHobData->NumberOfProcessors = 1;
+  MpInformationHobData->NumberOfEnabledProcessors = 1;
+
+  // Populate the processor information
+  ProcInfoBuffer = MpInformationHobData->ProcessorInfoBuffer;
+  ProcInfoBuffer[0].ProcessorId      = CpuInfo[0].Mpidr;
+  ProcInfoBuffer[0].Location.Package = GET_CLUSTER_ID(CpuInfo[0].Mpidr);
+  ProcInfoBuffer[0].Location.Core    = GET_CORE_ID(CpuInfo[0].Mpidr);
+  ProcInfoBuffer[0].Location.Thread  = GET_CORE_ID(CpuInfo[0].Mpidr);
+
+  // Populate the processor information flags
+  Flags = PROCESSOR_ENABLED_BIT | PROCESSOR_HEALTH_STATUS_BIT | PROCESSOR_AS_BSP_BIT;
+  ProcInfoBuffer[0].StatusFlag = Flags;
+
+  return;
+}
+
+/**
+  Use the FF-A boot information passed by the SPMC to populate a HOB list
+  suitable for consumption by the MM Core and drivers.
+
+  @param  [in, out] CpuDriverEntryPoint   Address of MM CPU driver entrypoint
+  @param  [in]      StmmBootInfo          Boot information passed by the SPMC
+
+**/
+VOID *
+CreateHobListFromStmmBootInfo (
+  IN  OUT  PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT *CpuDriverEntryPoint,
+  IN       EFI_STMM_BOOT_INFO                 *StmmBootInfo
+)
+{
+  EFI_HOB_HANDOFF_INFO_TABLE      *HobStart;
+  EFI_RESOURCE_ATTRIBUTE_TYPE     Attributes;
+  EFI_MMRAM_DESCRIPTOR            *NsCommBufMmramRange;
+  ARM_TF_CPU_DRIVER_EP_DESCRIPTOR *CpuDriverEntryPointDesc;
+
+  // Create a hoblist with a PHIT and EOH
+  HobStart = HobConstructor (
+               (VOID *) (UINTN) StmmBootInfo->SpMemBase,
+               (UINTN)  StmmBootInfo->SpMemSize,
+               (VOID *) (UINTN) StmmBootInfo->SpHeapBase,
+               (VOID *) (UINTN) (StmmBootInfo->SpHeapBase + StmmBootInfo->SpHeapSize)
+               );
+
+  // Check that the Hoblist starts at the bottom of the Heap
+  ASSERT (HobStart == (VOID *) (UINTN) StmmBootInfo->SpHeapBase);
+
+  // Build a Boot Firmware Volume HOB
+  BuildFvHob (StmmBootInfo->SpMemBase, StmmBootInfo->SpMemSize);
+
+  // Build a resource descriptor Hob that describes the available physical
+  // memory range
+  Attributes = (
+    EFI_RESOURCE_ATTRIBUTE_PRESENT |
+    EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
+    EFI_RESOURCE_ATTRIBUTE_TESTED |
+    EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
+    EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
+    EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
+    EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
+  );
+
+  BuildResourceDescriptorHob (
+    EFI_RESOURCE_SYSTEM_MEMORY,
+    Attributes,
+    (UINTN) StmmBootInfo->SpMemBase,
+    StmmBootInfo->SpMemSize
+    );
+
+  // Create an MP information hob from cpu information passed in the boot
+  // information structure
+  CreateMpInformationHobFromCpuInfo(StmmBootInfo->CpuInfo);
+
+  // Create a Guided HOB to tell the ARM TF CPU driver the location and length
+  // of the communication buffer shared with the Normal world.
+  NsCommBufMmramRange = (EFI_MMRAM_DESCRIPTOR *) BuildGuidHob (
+                                                   &gEfiStandaloneMmNonSecureBufferGuid,
+                                                   sizeof (EFI_MMRAM_DESCRIPTOR)
+                                                   );
+  NsCommBufMmramRange->PhysicalStart = StmmBootInfo->SpNsCommBufBase;
+  NsCommBufMmramRange->CpuStart      = StmmBootInfo->SpNsCommBufBase;
+  NsCommBufMmramRange->PhysicalSize  = StmmBootInfo->SpNsCommBufSize;
+  NsCommBufMmramRange->RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+
+  // Create a Guided HOB to enable the ARM TF CPU driver to share its entry
+  // point and populate it with the address of the shared buffer
+  CpuDriverEntryPointDesc =
+    (ARM_TF_CPU_DRIVER_EP_DESCRIPTOR *) BuildGuidHob (
+        &gEfiArmTfCpuDriverEpDescriptorGuid,
+        sizeof (ARM_TF_CPU_DRIVER_EP_DESCRIPTOR)
+        );
+
+  *CpuDriverEntryPoint = NULL;
+  CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr = CpuDriverEntryPoint;
+
+  // Create Mmram range hob from SP image layout
+  CreateMmramInformationHobFromImageLayout(StmmBootInfo, HobStart);
+
+  return HobStart;
+}

@@ -171,6 +171,22 @@ CreateHobListFromBootInfo (
   );
 
 /**
+  Use the boot information passed by the SPMC to populate a HOB list
+  suitable for consumption by the MM Core and drivers.
+
+  @param  [in, out] CpuDriverEntryPoint   Address of MM CPU driver entrypoint
+  @param  [in]      StmmBootInfo          Boot information passed by privileged
+                                          firmware
+
+**/
+VOID *
+EFIAPI
+CreateHobListFromStmmBootInfo (
+  IN  OUT  PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT *CpuDriverEntryPoint,
+  IN       EFI_STMM_BOOT_INFO     *StmmBootInfo
+  );
+
+/**
   The entry point of Standalone MM Foundation.
 
   @param  [in]  SharedBufAddress  Pointer to the Buffer between SPM and SP.

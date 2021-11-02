@@ -824,7 +824,11 @@ ModuleEntryPoint (
   //
   // Create Hoblist based upon boot information passed by privileged software
   //
-  HobStart = CreateHobListFromBootInfo (&CpuDriverEntryPoint, PayloadBootInfo);
+  if (UseOnlyFfaAbis) {
+    HobStart = CreateHobListFromStmmBootInfo (&CpuDriverEntryPoint, &StmmBootInfo);
+  } else {
+    HobStart = CreateHobListFromBootInfo (&CpuDriverEntryPoint, PayloadBootInfo);
+  }
 
   //
   // Call the MM Core entry point
