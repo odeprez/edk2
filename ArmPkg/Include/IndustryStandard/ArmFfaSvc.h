@@ -53,4 +53,71 @@
 // https://github.com/OP-TEE/optee_os/blob/master/core/arch/arm/kernel/stmm_sp.c#L66
 #define ARM_FFA_DESTINATION_ENDPOINT_ID  3
 
+/******************************************************************************
+ * Boot information protocol as per the FF-A v1.1 spec.
+ *****************************************************************************/
+#define FFA_INIT_DESC_SIGNATURE			0x00000FFA
+
+/* Boot information type. */
+#define FFA_BOOT_INFO_TYPE_STD			0x0U
+#define FFA_BOOT_INFO_TYPE_IMPL			0x1U
+
+#define FFA_BOOT_INFO_TYPE_MASK			0x1U
+#define FFA_BOOT_INFO_TYPE_SHIFT		0x7U
+#define FFA_BOOT_INFO_TYPE(type)		\
+	(((type) & FFA_BOOT_INFO_TYPE_MASK)	\
+	<< FFA_BOOT_INFO_TYPE_SHIFT)
+
+/* Boot information identifier. */
+#define FFA_BOOT_INFO_TYPE_ID_FDT		0x0U
+#define FFA_BOOT_INFO_TYPE_ID_HOB		0x1U
+
+#define FFA_BOOT_INFO_TYPE_ID_MASK		0x3FU
+#define FFA_BOOT_INFO_TYPE_ID_SHIFT		0x0U
+#define FFA_BOOT_INFO_TYPE_ID(type)		\
+	(((type) & FFA_BOOT_INFO_TYPE_ID_MASK)	\
+	<< FFA_BOOT_INFO_TYPE_ID_SHIFT)
+
+/* Format of Flags Name field. */
+#define FFA_BOOT_INFO_FLAG_NAME_STRING		0x0U
+#define FFA_BOOT_INFO_FLAG_NAME_UUID		0x1U
+
+#define FFA_BOOT_INFO_FLAG_NAME_MASK		0x3U
+#define FFA_BOOT_INFO_FLAG_NAME_SHIFT		0x0U
+#define FFA_BOOT_INFO_FLAG_NAME(type)		\
+	(((type) & FFA_BOOT_INFO_FLAG_NAME_MASK)\
+	<< FFA_BOOT_INFO_FLAG_NAME_SHIFT)
+
+/* Format of Flags Contents field. */
+#define FFA_BOOT_INFO_FLAG_CONTENT_ADR		0x0U
+#define FFA_BOOT_INFO_FLAG_CONTENT_VAL		0x1U
+
+#define FFA_BOOT_INFO_FLAG_CONTENT_MASK		0x1U
+#define FFA_BOOT_INFO_FLAG_CONTENT_SHIFT	0x2U
+#define FFA_BOOT_INFO_FLAG_CONTENT(content)		\
+	(((content) & FFA_BOOT_INFO_FLAG_CONTENT_MASK)	\
+	<< FFA_BOOT_INFO_FLAG_CONTENT_SHIFT)
+
+// Descriptor to pass boot information as per the FF-A v1.1 spec.
+typedef struct {
+  UINT32 Name[4];
+  UINT8 Type;
+  UINT8 Reserved;
+  UINT16 Flags;
+  UINT32 SizeBotInfo;
+  UINT64 Content;
+} EFI_FFA_BOOT_INFO_DESC;
+
+// Descriptor that contains boot info blobs size, number of desc it cointains
+// size of each descriptor and offset to the first descriptor.
+typedef struct {
+  UINT32 Magic; // 0xFFA^M
+  UINT32 Version;
+  UINT32 SizeBootInfoBlob;
+  UINT32 SizeBootInfoDesc;
+  UINT32 CountBootInfoDesc;
+  UINT32 OffsetBootInfoDesc;
+  UINT64 Reserved;
+} EFI_FFA_BOOT_INFO_HEADER;
+
 #endif // ARM_FFA_SVC_H_
