@@ -33,13 +33,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define SPM_MAJOR_VER_MASK   0xFFFF0000
 #define SPM_MINOR_VER_MASK   0x0000FFFF
 #define SPM_MAJOR_VER_SHIFT  16
-#define FFA_NOT_SUPPORTED    -1
 
-STATIC CONST UINT32  mSpmMajorVer = SPM_MAJOR_VERSION;
-STATIC CONST UINT32  mSpmMinorVer = SPM_MINOR_VERSION;
-
-STATIC CONST UINT32  mSpmMajorVerFfa = SPM_MAJOR_VERSION_FFA;
-STATIC CONST UINT32  mSpmMinorVerFfa = SPM_MINOR_VERSION_FFA;
+#define SPM_MAJOR_VER		  0
+#define SPM_MINOR_VER		  1
 
 #define BOOT_PAYLOAD_VERSION  1
 
@@ -111,6 +107,70 @@ GetAndPrintBootinformation (
   }
 
   return PayloadBootInfo;
+
+/**
+  An StMM SP implements partial support for FF-A v1.0. The FF-A ABIs are used to
+  get and set permissions of memory pages in collaboration with the SPMC and
+  signalling completion of initialisation. The original Arm MM communication
+  interface is used for communication with the Normal world. A TF-A specific
+  interface is used for initialising the SP.
+
+  With FF-A v1.1, the StMM SP uses only FF-A ABIs for initialisation and
+  communication. This is subject to support for FF-A v1.1 in the SPMC. If this
+  is not the case, the StMM implementation reverts to the FF-A v1.0
+  behaviour. Any of this is applicable only if the feature flag PcdFfaEnable is
+  TRUE.
+
+  This function helps the caller determine whether FF-A v1.1 or v1.0 are
+  available and if only FF-A ABIs can be used at runtime.
+**/
+STATIC
+EFI_STATUS
+CheckFfaCompatibility (BOOLEAN *UseOnlyFfaAbis)
+{
+  UINT16       SpmcMajorVer;
+  UINT16       SpmcMinorVer;
+  UINT32       SpmcVersion;
+  ARM_SVC_ARGS SpmcVersionArgs = {0};
+
+  // Sanity check in case of a spurious call.
+  if (FixedPcdGet32 (PcdFfaEnable) == 0) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Send the SPMC our version to see whether it supports the same or not.
+  SpmcVersionArgs.Arg0 = ARM_SVC_ID_FFA_VERSION_AARCH32;
+  SpmcVersionArgs.Arg1 = FFA_VERSION_COMPILED;
+
+  ArmCallSvc (&SpmcVersionArgs);
+  SpmcVersion = SpmcVersionArgs.Arg0;
+
+  // If the SPMC barfs then bail.
+  if (SpmcVersion == ARM_FFA_SPM_RET_NOT_SUPPORTED) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Extract the SPMC version
+  SpmcMajorVer = (SpmcVersion >> FFA_VERSION_MAJOR_SHIFT) & FFA_VERSION_MAJOR_MASK;
+  SpmcMinorVer = (SpmcVersion >> FFA_VERSION_MINOR_SHIFT) & FFA_VERSION_MINOR_MASK;
+
+  // If the major versions differ then all bets are off.
+  if (SpmcMajorVer != SPM_MAJOR_VERSION_FFA) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // We advertised v1.1 as our version. If the SPMC supports it, it must return
+  // the same or a compatible version. If it does not then FF-A ABIs cannot be
+  // used for all communication.
+  if (SpmcMinorVer >= SPM_MINOR_VERSION_FFA) {
+    *UseOnlyFfaAbis = TRUE;
+  } else {
+    *UseOnlyFfaAbis = FALSE;
+  }
+
+  // We have validated that there is a compatible FF-A
+  // implementation. So. return success.
+  return EFI_SUCCESS;
 }
 
 /**
@@ -220,34 +280,19 @@ GetSpmVersion (
   )
 {
   EFI_STATUS    Status;
-  UINT16        CalleeSpmMajorVer;
-  UINT16        CallerSpmMajorVer;
-  UINT16        CalleeSpmMinorVer;
-  UINT16        CallerSpmMinorVer;
+  UINT16        SpmMajorVersion;
+  UINT16        SpmMinorVersion;
   UINT32        SpmVersion;
   ARM_SVC_ARGS  SpmVersionArgs;
 
-  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
-    SpmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;
-    SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
-    SpmVersionArgs.Arg1 |= mSpmMinorVerFfa;
-    CallerSpmMajorVer    = mSpmMajorVerFfa;
-    CallerSpmMinorVer    = mSpmMinorVerFfa;
-  } else {
-    SpmVersionArgs.Arg0 = ARM_SVC_ID_SPM_VERSION_AARCH32;
-    CallerSpmMajorVer   = mSpmMajorVer;
-    CallerSpmMinorVer   = mSpmMinorVer;
-  }
+  SpmVersionArgs.Arg0 = ARM_SVC_ID_SPM_VERSION_AARCH32;
 
   ArmCallSvc (&SpmVersionArgs);
 
   SpmVersion = SpmVersionArgs.Arg0;
-  if (SpmVersion == FFA_NOT_SUPPORTED) {
-    return EFI_UNSUPPORTED;
-  }
 
-  CalleeSpmMajorVer = ((SpmVersion & SPM_MAJOR_VER_MASK) >> SPM_MAJOR_VER_SHIFT);
-  CalleeSpmMinorVer = ((SpmVersion & SPM_MINOR_VER_MASK) >> 0);
+  SpmMajorVersion = ((SpmVersion & SPM_MAJOR_VER_MASK) >> SPM_MAJOR_VER_SHIFT);
+  SpmMinorVersion = ((SpmVersion & SPM_MINOR_VER_MASK) >> 0);
 
   // Different major revision values indicate possibly incompatible functions.
   // For two revisions, A and B, for which the major revision values are
@@ -256,25 +301,17 @@ GetSpmVersion (
   // revision A must work in a compatible way with revision B.
   // However, it is possible for revision B to have a higher
   // function count than revision A.
-  if ((CalleeSpmMajorVer == CallerSpmMajorVer) &&
-      (CalleeSpmMinorVer >= CallerSpmMinorVer))
-  {
-    DEBUG ((
-      DEBUG_INFO,
-      "SPM Version: Major=0x%x, Minor=0x%x\n",
-      CalleeSpmMajorVer,
-      CalleeSpmMinorVer
-      ));
+  if ((SpmMajorVersion == SPM_MAJOR_VER) &&
+      (SpmMinorVersion >= SPM_MINOR_VER)) {
+    DEBUG ((DEBUG_INFO, "SPM Version: Major=0x%x, Minor=0x%x\n",
+	          SpmMajorVersion, SpmMinorVersion));
     Status = EFI_SUCCESS;
   } else {
-    DEBUG ((
-      DEBUG_INFO,
-      "Incompatible SPM Versions.\n Callee Version: Major=0x%x, Minor=0x%x.\n Caller: Major=0x%x, Minor>=0x%x.\n",
-      CalleeSpmMajorVer,
-      CalleeSpmMinorVer,
-      CallerSpmMajorVer,
-      CallerSpmMinorVer
-      ));
+    DEBUG ((DEBUG_INFO, "Incompatible SPM Versions.\n"));
+    DEBUG ((DEBUG_INFO, "Current Version: Major=0x%x, Minor=0x%x.\n",
+            SpmMajorVersion, SpmMinorVersion));
+    DEBUG ((DEBUG_INFO, "Expected: Major=0x%x, Minor>=0x%x.\n",
+            SPM_MAJOR_VER, SPM_MINOR_VER));
     Status = EFI_UNSUPPORTED;
   }
 
@@ -336,9 +373,14 @@ ModuleEntryPoint (
   VOID                            *TeData;
   UINTN                           TeDataSize;
   EFI_PHYSICAL_ADDRESS            ImageBase;
+  BOOLEAN                         UseOnlyFfaAbis = FALSE;
 
-  // Get Secure Partition Manager Version Information
-  Status = GetSpmVersion ();
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+    Status = CheckFfaCompatibility (&UseOnlyFfaAbis);
+  } else {
+    // Get Secure Partition Manager Version Information
+    Status = GetSpmVersion ();
+  }
   if (EFI_ERROR (Status)) {
     goto finish;
   }
