@@ -47,6 +47,27 @@ typedef struct {
   EFI_SECURE_PARTITION_CPU_INFO    *CpuInfo;
 } EFI_SECURE_PARTITION_BOOT_INFO;
 
+
+/**
+  This structure is used to stage boot information required to initialize the
+  standalone MM environment when FF-A is used as the interface between this
+  secure partition and the SPMC. This structure supersedes
+  EFI_SECURE_PARTITION_BOOT_INFO and reduces the amount of information that must
+  be passed by the SPMC for SP initialization.
+**/
+typedef struct {
+  UINT64                        SpMemBase;
+  UINT64                        SpMemSize;
+  UINT64                        SpNsCommBufBase;
+  UINT64                        SpNsCommBufSize;
+  UINT64                        SpSharedBufBase;
+  UINT64                        SpSharedBufSize;
+  UINT64                        SpHeapBase;
+  UINT64                        SpHeapSize;
+  /* UP migrate-able FF-A SP requires awareness of only 1 cpu */
+  EFI_SECURE_PARTITION_CPU_INFO CpuInfo[1];
+} EFI_STMM_BOOT_INFO;
+
 typedef
 EFI_STATUS
 (*PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT) (
