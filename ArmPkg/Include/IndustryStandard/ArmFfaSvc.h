@@ -21,6 +21,11 @@
 #define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH32  0x84000070
 #define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64   0xC400006F
 #define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64  0xC4000070
+#define ARM_SVC_ID_FFA_SUCCESS_AARCH32               0x84000061
+#define ARM_SVC_ID_FFA_SUCCESS_AARCH64               0xC4000061
+#define ARM_SVC_ID_FFA_ERROR_AARCH32                 0x84000060
+#define ARM_SVC_ID_FFA_ERROR_AARCH64                 0xC4000060
+#define ARM_SVC_ID_FFA_MSG_WAIT_AARCH32              0x8400006B
 
 /* Generic IDs when using AArch32 or AArch64 execution state */
 #ifdef MDE_CPU_AARCH64
@@ -35,7 +40,7 @@
 #define SPM_MAJOR_VERSION_FFA  1
 #define SPM_MINOR_VERSION_FFA  0
 
-#define ARM_FFA_SPM_RET_SUCCESS             0
+#define ARM_FFA_SPM_RET_SUCCESS              0
 #define ARM_FFA_SPM_RET_NOT_SUPPORTED       -1
 #define ARM_FFA_SPM_RET_INVALID_PARAMETERS  -2
 #define ARM_FFA_SPM_RET_NO_MEMORY           -3
@@ -44,6 +49,20 @@
 #define ARM_FFA_SPM_RET_DENIED              -6
 #define ARM_FFA_SPM_RET_RETRY               -7
 #define ARM_FFA_SPM_RET_ABORTED             -8
+
+// FF-A version helper macros
+#define FFA_VERSION_MAJOR_SHIFT             16
+#define FFA_VERSION_MAJOR_MASK				      0x7FFF
+#define FFA_VERSION_MINOR_SHIFT         		0
+#define FFA_VERSION_MINOR_MASK          		0xFFFF
+#define FFA_VERSION_BIT31_MASK          		(0x1u << 31)
+
+#define MAKE_FFA_VERSION(major, minor)  					\
+	((((major) & FFA_VERSION_MAJOR_MASK) << FFA_VERSION_MAJOR_SHIFT) |	\
+	 (((minor) & FFA_VERSION_MINOR_MASK) << FFA_VERSION_MINOR_SHIFT))
+
+#define FFA_VERSION_COMPILED            MAKE_FFA_VERSION(SPM_MAJOR_VERSION_FFA, \
+                                        SPM_MINOR_VERSION_FFA)
 
 // For now, the destination id to be used in the FF-A calls
 // is being hard-coded. Subsequently, support will be added
