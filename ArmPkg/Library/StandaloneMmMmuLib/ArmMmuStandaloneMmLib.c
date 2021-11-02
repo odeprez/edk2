@@ -25,6 +25,64 @@
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
 
+
+/**
+  Utility function to determine whether ABIs in FF-A v1.1 to set and get
+  memory permissions can be used. Ideally, this should be invoked once in the
+  library constructor and set a flag that can be used at runtime. However, the
+  StMM Core invokes this library before constructors are called and before the
+  StMM image itself is relocated.
+
+  @retval EFI_SUCCESS     The availability of ABIs was correctly determined.
+  @retval Other value     Software stack is misconfigured.
+
+**/
+STATIC
+BOOLEAN
+UseFfaMemPermAbis (
+  VOID
+  )
+{
+  ARM_SVC_ARGS  SvcArgs;
+  UINT32        SpmcFfaVersion;
+  UINT16        SpmcMajorVer;
+  UINT16        SpmcMinorVer;
+
+  // Nothing to do if FF-A has not be enabled
+  if (FixedPcdGet32 (PcdFfaEnable) == 0) {
+    return FALSE;
+  }
+
+  // Prepare the message parameters.
+  ZeroMem (&SvcArgs, sizeof (ARM_SVC_ARGS));
+  SvcArgs.Arg0 = ARM_SVC_ID_FFA_VERSION_AARCH32;
+  SvcArgs.Arg1 = FFA_VERSION_COMPILED;
+
+  // Invoke the ABI
+  ArmCallSvc (&SvcArgs);
+
+  // Check if FF-A is supported and what version
+  SpmcFfaVersion = SvcArgs.Arg0;
+
+  // Damn! FF-A is not supported at all even though we specified v1.0 as our
+  // version. However, the feature flag has been turned on. This is a
+  // misconfigured software stack. So, return an error and assert in a debug build.
+  if (SpmcFfaVersion == ARM_FFA_SPM_RET_NOT_SUPPORTED) {
+    ASSERT (0);
+    return FALSE;
+  }
+
+  SpmcMajorVer = (SpmcFfaVersion >> FFA_VERSION_MAJOR_SHIFT) & FFA_VERSION_MAJOR_MASK;
+  SpmcMinorVer = (SpmcFfaVersion >> FFA_VERSION_MINOR_SHIFT) & FFA_VERSION_MINOR_MASK;
+
+  if ((SpmcMajorVer == SPM_MAJOR_VERSION_FFA) && (SpmcMinorVer >= SPM_MINOR_VERSION_FFA)) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+
 /** Send memory permission request to target.
 
   @param [in, out]  SvcArgs     Pointer to SVC arguments to send. On
@@ -55,6 +113,36 @@ SendMemoryPermissionRequest (
 
   ArmCallSvc (SvcArgs);
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+
+    // Check if FF-A memory permission ABIs were used.
+    if (UseFfaMemPermAbis()) {
+      switch (SvcArgs->Arg0) {
+
+        case ARM_SVC_ID_FFA_ERROR_AARCH32:
+        case ARM_SVC_ID_FFA_ERROR_AARCH64:
+          switch (SvcArgs->Arg2) {
+          case ARM_FFA_SPM_RET_INVALID_PARAMETERS:
+            return EFI_INVALID_PARAMETER;
+          case ARM_FFA_SPM_RET_NOT_SUPPORTED:
+            return EFI_UNSUPPORTED;
+          default:
+            // Undefined error code received.
+            ASSERT (0);
+            return EFI_INVALID_PARAMETER;
+          }
+
+        case ARM_SVC_ID_FFA_SUCCESS_AARCH32:
+        case ARM_SVC_ID_FFA_SUCCESS_AARCH64:
+          *RetVal = SvcArgs->Arg2;
+          return EFI_SUCCESS;
+
+        default:
+          // Undefined error code received.
+          ASSERT (0);
+          return EFI_INVALID_PARAMETER;
+      }
+    }
+
     // Get/Set memory attributes is an atomic call, with
     // StandaloneMm at S-EL0 being the caller and the SPM
     // core being the callee. Thus there won't be a
@@ -164,12 +252,18 @@ GetMemoryPermissions (
   // See [1], Section 13.5.5.1 MM_SP_MEMORY_ATTRIBUTES_GET_AARCH64.
   ZeroMem (&SvcArgs, sizeof (ARM_SVC_ARGS));
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
-    // See [2], Section 10.2 FFA_MSG_SEND_DIRECT_REQ.
-    SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
-    SvcArgs.Arg1 = ARM_FFA_DESTINATION_ENDPOINT_ID;
-    SvcArgs.Arg2 = 0;
-    SvcArgs.Arg3 = ARM_SVC_ID_SP_GET_MEM_ATTRIBUTES;
-    SvcArgs.Arg4 = BaseAddress;
+    // Check if FF-A memory permission ABIs can be used.
+    if (UseFfaMemPermAbis()) {
+      SvcArgs.Arg0 = ARM_SVC_ID_FFA_MEM_PERM_GET_AARCH32;
+      SvcArgs.Arg1 = BaseAddress;
+    } else {
+      // See [2], Section 10.2 FFA_MSG_SEND_DIRECT_REQ.
+      SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
+      SvcArgs.Arg1 = ARM_FFA_DESTINATION_ENDPOINT_ID;
+      SvcArgs.Arg2 = 0;
+      SvcArgs.Arg3 = ARM_SVC_ID_SP_GET_MEM_ATTRIBUTES;
+      SvcArgs.Arg4 = BaseAddress;
+    }
   } else {
     SvcArgs.Arg0 = ARM_SVC_ID_SP_GET_MEM_ATTRIBUTES;
     SvcArgs.Arg1 = BaseAddress;
@@ -219,14 +313,22 @@ RequestMemoryPermissionChange (
   // See [1], Section 13.5.5.2 MM_SP_MEMORY_ATTRIBUTES_SET_AARCH64.
   ZeroMem (&SvcArgs, sizeof (ARM_SVC_ARGS));
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
-    // See [2], Section 10.2 FFA_MSG_SEND_DIRECT_REQ.
-    SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
-    SvcArgs.Arg1 = ARM_FFA_DESTINATION_ENDPOINT_ID;
-    SvcArgs.Arg2 = 0;
-    SvcArgs.Arg3 = ARM_SVC_ID_SP_SET_MEM_ATTRIBUTES;
-    SvcArgs.Arg4 = BaseAddress;
-    SvcArgs.Arg5 = EFI_SIZE_TO_PAGES (Length);
-    SvcArgs.Arg6 = Permissions;
+    // Check if FF-A memory permission ABIs can be used.
+    if (UseFfaMemPermAbis()) {
+      SvcArgs.Arg0 = ARM_SVC_ID_FFA_MEM_PERM_SET_AARCH32;
+      SvcArgs.Arg1 = BaseAddress;
+      SvcArgs.Arg2 = EFI_SIZE_TO_PAGES (Length);
+      SvcArgs.Arg3 = Permissions;
+    } else {
+      // See [2], Section 10.2 FFA_MSG_SEND_DIRECT_REQ.
+      SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
+      SvcArgs.Arg1 = ARM_FFA_DESTINATION_ENDPOINT_ID;
+      SvcArgs.Arg2 = 0;
+      SvcArgs.Arg3 = ARM_SVC_ID_SP_SET_MEM_ATTRIBUTES;
+      SvcArgs.Arg4 = BaseAddress;
+      SvcArgs.Arg5 = EFI_SIZE_TO_PAGES (Length);
+      SvcArgs.Arg6 = Permissions;
+    }
   } else {
     SvcArgs.Arg0 = ARM_SVC_ID_SP_SET_MEM_ATTRIBUTES;
     SvcArgs.Arg1 = BaseAddress;
