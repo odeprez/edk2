@@ -118,6 +118,20 @@ UpdateMmFoundationPeCoffPermissions (
       ImageContext->ImageAddress,
       SectionHeader.PointerToRawData
       ));
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: Section %d of image at 0x%lx has %d bytes size\n",
+       __FUNCTION__, Index,
+       ImageContext->ImageAddress,
+       SectionHeader.Misc.VirtualSize
+       ));
+
+    // Skip sections with a size of 0
+    if (SectionHeader.Misc.VirtualSize == 0) {
+      DEBUG ((DEBUG_INFO,
+	      "%a: Skipping section %a \n", __FUNCTION__, SectionHeader.Name));
+      continue;
+    }
 
     //
     // If the section is marked as XN then remove the X attribute. Furthermore,
