@@ -40,7 +40,7 @@
 #endif
 
 #define SPM_MAJOR_VERSION_FFA  1
-#define SPM_MINOR_VERSION_FFA  0
+#define SPM_MINOR_VERSION_FFA  1
 
 #define ARM_FFA_SPM_RET_SUCCESS              0
 #define ARM_FFA_SPM_RET_NOT_SUPPORTED       -1
