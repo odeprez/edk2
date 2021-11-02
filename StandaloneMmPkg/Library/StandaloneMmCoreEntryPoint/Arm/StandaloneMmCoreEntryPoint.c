@@ -43,6 +43,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define FFA_PAGE_16K 1
 #define FFA_PAGE_64K 2
 
+// Local variable to help Standalone MM Core decide whether FF-A ABIs can be
+// used for all communication. This variable is usable only after the StMM image
+// has been relocated and all image section permissions have been correctly
+// updated.
+STATIC BOOLEAN mUseOnlyFfaAbis = FALSE;
+
 PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 
 /**
@@ -640,6 +646,13 @@ InitArmSvcArgs (
   )
 {
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+
+    // With FF-A v1.1 invoke FFA_MSG_WAIT to signal completion of SP init.
+    if (mUseOnlyFfaAbis) {
+      InitMmFoundationSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_WAIT_AARCH32;
+      return;
+    }
+
     InitMmFoundationSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
     InitMmFoundationSvcArgs->Arg1 = 0;
     InitMmFoundationSvcArgs->Arg2 = 0;
@@ -820,6 +833,9 @@ ModuleEntryPoint (
     Status = PeCoffLoaderRelocateImage (&ImageContext);
     ASSERT_EFI_ERROR (Status);
   }
+
+  // Update the global copy now that the image has been relocated.
+  mUseOnlyFfaAbis = UseOnlyFfaAbis;
 
   //
   // Create Hoblist based upon boot information passed by privileged software
