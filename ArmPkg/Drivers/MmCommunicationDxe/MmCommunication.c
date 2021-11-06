@@ -43,6 +43,9 @@ STATIC ARM_MEMORY_REGION_DESCRIPTOR  mNsCommBuffMemRegion;
 // Notification event when virtual address map is set.
 STATIC EFI_EVENT  mSetVirtualAddressMapEvent;
 
+// Notification event when exit boot services is called.
+STATIC EFI_EVENT  mExitBootServicesEvent;
+
 //
 // Handle to install the MM Communication Protocol
 //
@@ -255,6 +258,39 @@ NotifySetVirtualAddressMap (
   }
 }
 
+/**
+  Notification callback on ExitBootServices event.
+
+  This function notifies the MM communication protocol interface on
+  ExitBootServices event and releases the FF-A RX/TX buffer.
+
+  @param  Event          ExitBootServices event.
+  @param  Context        A context when the ExitBootServices triggered.
+
+  @retval EFI_SUCCESS    The function executed successfully.
+  @retval Other          Some error occurred when executing this function.
+
+**/
+STATIC
+VOID
+EFIAPI
+NotifyExitBootServices (
+  IN EFI_EVENT  Event,
+  IN VOID      *Context
+  )
+{
+  ARM_SMC_ARGS SmcArgs = {0};
+
+  SmcArgs.Arg0 = ARM_SVC_ID_FFA_RXTX_UNMAP_AARCH32;
+  SmcArgs.Arg1 = mFfaPartId << 16;  // TODO: Use a macro for shift
+  ArmCallSmc (&SmcArgs);
+
+  // We do not bother checking the error code of the RXTX_UNMAP invocation
+  // since we did map the buffers and this call must succeed.
+  return;
+
+}
+
 STATIC
 EFI_STATUS
 GetMmCompatibility (
@@ -452,6 +488,19 @@ MmCommunication2Initialize (
     goto CleanAddedMemorySpace;
   }
 
+  // Register notification callback when ExitBootservices is called to
+  // unregister the FF-A RX/TX buffer pair. This allows the OS to register its
+  // own buffer pair.
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+    Status = gBS->CreateEvent (
+                    EVT_SIGNAL_EXIT_BOOT_SERVICES,
+                    TPL_NOTIFY,
+                    NotifyExitBootServices,
+                    NULL,
+                    &mExitBootServicesEvent
+                    );
+    ASSERT_EFI_ERROR (Status);
+  }
   // Register notification callback when virtual address is associated
   // with the physical address.
   // Create a Set Virtual Address Map event.
