@@ -29,6 +29,12 @@
 STATIC UINT16  mFfaPartId;
 
 //
+// RX/TX pair if FF-A support is enabled
+//
+STATIC UINT8 FfaRxBuf[EFI_PAGE_SIZE] __attribute__ ((aligned (EFI_PAGE_SIZE)));
+STATIC UINT8 FfaTxBuf[EFI_PAGE_SIZE] __attribute__ ((aligned (EFI_PAGE_SIZE)));
+
+//
 // Address, Length of the pre-allocated buffer for communication with the secure
 // world.
 //
@@ -293,9 +299,8 @@ GetMmCompatibility (
     Status = EFI_UNSUPPORTED;
   }
 
-  // If FF-A is supported then discover our ID.
+  // If FF-A is supported then discover our ID and register our RX/TX buffers.
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
-
     // Get our ID
     ZeroMem(&SmcArgs, sizeof(SmcArgs));
     SmcArgs.Arg0 = ARM_SVC_ID_FFA_ID_GET_AARCH32;
@@ -306,6 +311,17 @@ GetMmCompatibility (
     }
     DEBUG ((DEBUG_INFO, "FF-A partition ID = 0x%lx.\n", SmcArgs.Arg2));
     mFfaPartId = SmcArgs.Arg2;
+
+    // Register our RX/TX pair
+    SmcArgs.Arg0 = ARM_SVC_ID_FFA_RXTX_MAP_AARCH64;
+    SmcArgs.Arg1 = (UINTN) FfaTxBuf;
+    SmcArgs.Arg2 = (UINTN) FfaRxBuf;
+    SmcArgs.Arg3 = 1;                  //TODO: Is this a given?
+    ArmCallSmc (&SmcArgs);
+    if (SmcArgs.Arg0 == ARM_SVC_ID_FFA_ERROR_AARCH32) {
+      DEBUG ((DEBUG_ERROR, "Unable to register FF-A RX/TX buffers (%d).\n", SmcArgs.Arg2));
+      return EFI_UNSUPPORTED;
+    }
 
     return EFI_SUCCESS;
   }
