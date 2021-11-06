@@ -199,6 +199,8 @@ DelegatedEventLoop (
   BOOLEAN     FfaEnabled;
   EFI_STATUS  Status;
   UINTN       SvcStatus;
+  UINT16      SenderPartId;
+  UINT16      ReceiverPartId;
 
   while (TRUE) {
     ArmCallSvc (EventCompleteSvcArgs);
@@ -215,9 +217,12 @@ DelegatedEventLoop (
 
     FfaEnabled = FixedPcdGet32 (PcdFfaEnable != 0);
     if (FfaEnabled) {
+      SenderPartId = EventCompleteSvcArgs->Arg1 >> 16;
+      ReceiverPartId = EventCompleteSvcArgs->Arg1 & 0xffff;
       Status = CpuDriverEntryPoint (
                  EventCompleteSvcArgs->Arg0,
-                 EventCompleteSvcArgs->Arg6,
+                 // Assume CPU number 0
+                 0,
                  EventCompleteSvcArgs->Arg3
                  );
       if (EFI_ERROR (Status)) {
@@ -267,7 +272,7 @@ DelegatedEventLoop (
 
     if (FfaEnabled) {
       EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
-      EventCompleteSvcArgs->Arg1 = 0;
+      EventCompleteSvcArgs->Arg1 = ReceiverPartId << 16 | SenderPartId;
       EventCompleteSvcArgs->Arg2 = 0;
       EventCompleteSvcArgs->Arg3 = ARM_SVC_ID_SP_EVENT_COMPLETE;
       EventCompleteSvcArgs->Arg4 = SvcStatus;
