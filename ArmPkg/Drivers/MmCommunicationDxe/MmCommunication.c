@@ -24,6 +24,11 @@
 #include "MmCommunicate.h"
 
 //
+// Partition ID if FF-A support is enabled
+//
+STATIC UINT16  mFfaPartId;
+
+//
 // Address, Length of the pre-allocated buffer for communication with the secure
 // world.
 //
@@ -286,6 +291,23 @@ GetMmCompatibility (
       MM_CALLER_MINOR_VER
       ));
     Status = EFI_UNSUPPORTED;
+  }
+
+  // If FF-A is supported then discover our ID.
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+
+    // Get our ID
+    ZeroMem(&SmcArgs, sizeof(SmcArgs));
+    SmcArgs.Arg0 = ARM_SVC_ID_FFA_ID_GET_AARCH32;
+    ArmCallSmc (&SmcArgs);
+    if (SmcArgs.Arg0 == ARM_SVC_ID_FFA_ERROR_AARCH32) {
+      DEBUG ((DEBUG_ERROR, "Unable to retrieve FF-A partition ID (%d).\n", SmcArgs.Arg2));
+      return EFI_UNSUPPORTED;
+    }
+    DEBUG ((DEBUG_INFO, "FF-A partition ID = 0x%lx.\n", SmcArgs.Arg2));
+    mFfaPartId = SmcArgs.Arg2;
+
+    return EFI_SUCCESS;
   }
 
   return Status;
