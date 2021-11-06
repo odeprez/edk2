@@ -18,6 +18,7 @@
 
 #include <Protocol/MmCommunication2.h>
 
+#include <IndustryStandard/ArmFfaSvc.h>
 #include <IndustryStandard/ArmStdSmc.h>
 
 #include "MmCommunicate.h"
@@ -250,14 +251,20 @@ GetMmCompatibility (
 {
   EFI_STATUS    Status;
   UINT32        MmVersion;
-  ARM_SMC_ARGS  MmVersionArgs;
+  ARM_SMC_ARGS  SmcArgs = {0};
 
-  // MM_VERSION uses SMC32 calling conventions
-  MmVersionArgs.Arg0 = ARM_SMC_ID_MM_VERSION_AARCH32;
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+    SmcArgs.Arg0 = ARM_SVC_ID_FFA_VERSION_AARCH32;
+    SmcArgs.Arg1 = MM_CALLER_MAJOR_VER << MM_MAJOR_VER_SHIFT;
+    SmcArgs.Arg1 |= MM_CALLER_MINOR_VER;
+  } else {
+    // MM_VERSION uses SMC32 calling conventions
+    SmcArgs.Arg0 = ARM_SMC_ID_MM_VERSION_AARCH32;
+  }
 
-  ArmCallSmc (&MmVersionArgs);
+  ArmCallSmc (&SmcArgs);
 
-  MmVersion = MmVersionArgs.Arg0;
+  MmVersion = SmcArgs.Arg0;
 
   if ((MM_MAJOR_VER (MmVersion) == MM_CALLER_MAJOR_VER) &&
       (MM_MINOR_VER (MmVersion) >= MM_CALLER_MINOR_VER))

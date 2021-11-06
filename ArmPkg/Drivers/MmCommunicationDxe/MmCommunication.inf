@@ -31,6 +31,9 @@
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
 
+[FixedPcd]
+  gArmTokenSpaceGuid.PcdFfaEnable
+
 [LibraryClasses]
   ArmLib
   ArmSmcLib
