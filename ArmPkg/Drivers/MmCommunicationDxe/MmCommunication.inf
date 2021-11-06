@@ -55,5 +55,8 @@
   gArmTokenSpaceGuid.PcdMmBufferBase
   gArmTokenSpaceGuid.PcdMmBufferSize
 
+[FixedPcd]
+  gArmTokenSpaceGuid.PcdFfaEnable
+
 [Depex]
   gEfiCpuArchProtocolGuid

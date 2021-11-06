@@ -231,7 +231,7 @@
   #   0 - Selects SVC calls for communication between S-EL0 and SPMC.<BR>
   #   Using unsigned integer as boolean does not work on assembler.
   # @Prompt Enable FF-A support.
-  gArmTokenSpaceGuid.PcdFfaEnable|0|UINT32|0x0000005B
+  gArmTokenSpaceGuid.PcdFfaEnable|1|UINT32|0x0000005B
 
 [PcdsFixedAtBuild.common, PcdsPatchableInModule.common]
   gArmTokenSpaceGuid.PcdFdBaseAddress|0|UINT64|0x0000002B
