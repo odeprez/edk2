@@ -8,6 +8,7 @@
 
 #include <Library/ArmLib.h>
 #include <Library/ArmSmcLib.h>
+#include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DxeServicesTableLib.h>
@@ -27,6 +28,11 @@
 // Partition ID if FF-A support is enabled
 //
 STATIC UINT16  mFfaPartId;
+
+// Partition information of the StMM SP if FF-A support is enabled
+// TODO: Revisit assumption that there is only a single StMM SP
+//
+STATIC EFI_FFA_PART_INFO_DESC mStmmPartInfo;
 
 //
 // RX/TX pair if FF-A support is enabled
@@ -298,7 +304,9 @@ GetMmCompatibility (
 {
   EFI_STATUS    Status;
   UINT32        MmVersion;
+  UINT32        SmccUuid[4];
   ARM_SMC_ARGS  SmcArgs = {0};
+  EFI_GUID      MmCommProtGuid = EFI_MM_COMMUNICATION2_PROTOCOL_GUID;
 
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
     SmcArgs.Arg0 = ARM_SVC_ID_FFA_VERSION_AARCH32;
@@ -335,8 +343,11 @@ GetMmCompatibility (
     Status = EFI_UNSUPPORTED;
   }
 
-  // If FF-A is supported then discover our ID and register our RX/TX buffers.
+  // If FF-A is supported then discover the StMM SP's presence, ID, our ID and
+  // register our RX/TX buffers.
   if (FixedPcdGet32 (PcdFfaEnable) != 0) {
+    EFI_FFA_PART_INFO_DESC *StmmPartInfo;
+
     // Get our ID
     ZeroMem(&SmcArgs, sizeof(SmcArgs));
     SmcArgs.Arg0 = ARM_SVC_ID_FFA_ID_GET_AARCH32;
@@ -359,7 +370,62 @@ GetMmCompatibility (
       return EFI_UNSUPPORTED;
     }
 
+    // Discover the StMM SP after converting the EFI_GUID to a format TF-A will
+    // understand.
+    SmcArgs.Arg0 = ARM_SVC_ID_FFA_PARTITION_INFO_GET_AARCH32;
+    MmCommProtGuid.Data2 += MmCommProtGuid.Data3;
+    MmCommProtGuid.Data3 = MmCommProtGuid.Data2 - MmCommProtGuid.Data3;
+    MmCommProtGuid.Data2 = MmCommProtGuid.Data2 - MmCommProtGuid.Data3;
+    CopyMem ((VOID *) SmccUuid, (VOID *) &MmCommProtGuid, sizeof(EFI_GUID));
+    SmcArgs.Arg1 = SmccUuid[0];
+    SmcArgs.Arg2 = SmccUuid[1];
+    SmcArgs.Arg3 = SmccUuid[2];
+    SmcArgs.Arg3 = SwapBytes32(SmcArgs.Arg3);
+    SmcArgs.Arg4 = SmccUuid[3];
+    SmcArgs.Arg4 = SwapBytes32(SmcArgs.Arg4);
+    ArmCallSmc (&SmcArgs);
+    if (SmcArgs.Arg0 == ARM_SVC_ID_FFA_ERROR_AARCH32) {
+      DEBUG ((DEBUG_ERROR, "Unable to discover FF-A StMM SP (%d).\n", SmcArgs.Arg2));
+      goto ffa_init_error;
+    }
+
+    // Retrieve the partition information from the RX buffer
+    StmmPartInfo = (EFI_FFA_PART_INFO_DESC *) FfaRxBuf;
+
+    // TODO: Sanity check the partition type.
+    DEBUG ((DEBUG_INFO, "Discovered FF-A StMM SP."));
+    DEBUG ((DEBUG_INFO, "ID = 0x%lx, Execution contexts = %d, Properties = 0x%lx. \n",
+	    StmmPartInfo->PartId, StmmPartInfo->EcCnt, StmmPartInfo->PartProps));
+
+    // Make a local copy
+    mStmmPartInfo = *StmmPartInfo;
+
+    // Release the RX buffer
+    ZeroMem(&SmcArgs, sizeof(SmcArgs));
+    SmcArgs.Arg0 = ARM_SVC_ID_FFA_RX_RELEASE_AARCH32;
+    SmcArgs.Arg1 = mFfaPartId;
+    ArmCallSmc (&SmcArgs);
+
+    // This should really never fail since there is only a single CPU booting
+    // and another CPU could not have released the RX buffer before us.
+    if (SmcArgs.Arg0 == ARM_SVC_ID_FFA_ERROR_AARCH32) {
+      DEBUG ((DEBUG_ERROR, "Unable to release FF-A RX buffer (%d).\n", SmcArgs.Arg2));
+      ASSERT (0);
+      goto ffa_init_error;
+    }
+
     return EFI_SUCCESS;
+
+  ffa_init_error:
+    // Release the RX/TX pair before exiting.
+    ZeroMem(&SmcArgs, sizeof(SmcArgs));
+    SmcArgs.Arg0 = ARM_SVC_ID_FFA_RXTX_UNMAP_AARCH32;
+    SmcArgs.Arg1 = mFfaPartId << 16;  // TODO: Use a macro for shift
+    ArmCallSmc (&SmcArgs);
+
+    // We do not bother checking the error code of the RXTX_UNMAP invocation
+    // since we did map the buffers and this call must succeed.
+    return EFI_UNSUPPORTED;
   }
 
   return Status;

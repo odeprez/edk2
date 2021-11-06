@@ -19,6 +19,9 @@
 #define ARM_SVC_ID_FFA_VERSION_AARCH32               0x84000063
 #define ARM_SVC_ID_FFA_RXTX_MAP_AARCH32              0x84000066
 #define ARM_SVC_ID_FFA_RXTX_MAP_AARCH64              0xC4000066
+#define ARM_SVC_ID_FFA_RX_RELEASE_AARCH32            0x84000065
+#define ARM_SVC_ID_FFA_RXTX_UNMAP_AARCH32            0x84000067
+#define ARM_SVC_ID_FFA_PARTITION_INFO_GET_AARCH32    0x84000068
 #define ARM_SVC_ID_FFA_ID_GET_AARCH32                0x84000069
 #define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH32   0x8400006F
 #define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH32  0x84000070
@@ -143,5 +146,26 @@ typedef struct {
   UINT32 OffsetBootInfoDesc;
   UINT64 Reserved;
 } EFI_FFA_BOOT_INFO_HEADER;
+
+// FF-A partition information descriptor
+typedef struct {
+  UINT16 PartId;
+  UINT16 EcCnt;
+  UINT32 PartProps;
+  UINT32 PartGuid[4];
+} EFI_FFA_PART_INFO_DESC;
+
+#define PART_INFO_PROP_MASK                    0x3f
+#define PART_INFO_PROP_SHIFT                   0
+#define PART_INFO_PROP_DIR_MSG_RECV_BIT        (1u << 0)
+#define PART_INFO_PROP_DIR_MSG_SEND_BIT        (1u << 1)
+#define PART_INFO_PROP_INDIR_MSG_BIT           (1u << 2)
+#define PART_INFO_PROP_NOTIFICATIONS_BIT       (1u << 3)
+#define PART_INFO_PROP_EP_TYPE_MASK            0x3
+#define PART_INFO_PROP_EP_TYPE_SHIFT           4
+#define PART_INFO_PROP_EP_PE                   0
+#define PART_INFO_PROP_EP_SEPID_IND            1
+#define PART_INFO_PROP_EP_SEPID_DEP            2
+#define PART_INFO_PROP_EP_AUX                  3
 
 #endif // ARM_FFA_SVC_H_
