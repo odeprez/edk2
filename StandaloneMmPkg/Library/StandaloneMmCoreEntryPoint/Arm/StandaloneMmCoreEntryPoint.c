@@ -453,7 +453,8 @@ PopulateBootinformation (
   BOOLEAN FoundHeap = FALSE;
   UINT32 PageSize;
 
-  Offset = fdt_path_offset (DtbAddress, "/");
+  Offset = fdt_node_offset_by_compatible (DtbAddress, -1, "arm,ffa-manifest-1.0");
+
   DEBUG ((DEBUG_INFO, "Offset  = %d \n", Offset));
   if (Offset < 0) {
     DEBUG ((DEBUG_ERROR, "Missing FF-A boot information in manifest\n"));

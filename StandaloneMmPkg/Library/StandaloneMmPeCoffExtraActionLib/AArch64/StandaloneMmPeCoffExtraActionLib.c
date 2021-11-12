@@ -174,7 +174,9 @@ UpdatePeCoffPermissions (
           Base,
           SectionHeader.Misc.VirtualSize
           ));
-        ReadOnlyUpdater (Base, SectionHeader.Misc.VirtualSize);
+        if (SectionHeader.Misc.VirtualSize != 0) {
+          ReadOnlyUpdater (Base, SectionHeader.Misc.VirtualSize);
+        }
       } else {
         DEBUG ((
           DEBUG_WARN,
@@ -194,8 +196,11 @@ UpdatePeCoffPermissions (
         Base,
         SectionHeader.Misc.VirtualSize
         ));
-      ReadOnlyUpdater (Base, SectionHeader.Misc.VirtualSize);
-      NoExecUpdater (Base, SectionHeader.Misc.VirtualSize);
+
+      if (SectionHeader.Misc.VirtualSize != 0) {
+        ReadOnlyUpdater (Base, SectionHeader.Misc.VirtualSize);
+        NoExecUpdater (Base, SectionHeader.Misc.VirtualSize);
+      }
     }
 
     SectionHeaderOffset += sizeof (EFI_IMAGE_SECTION_HEADER);
