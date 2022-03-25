@@ -155,13 +155,6 @@
   # hardware coherency (i.e., no virtualization or cache coherent DMA)
   gArmTokenSpaceGuid.PcdNormalMemoryNonshareableOverride|FALSE|BOOLEAN|0x00000043
 
-[PcdsFeatureFlag.AARCH64, PcdsFeatureFlag.ARM]
-  ## Used to select method for requesting services from S-EL1.<BR><BR>
-  #   TRUE  - Selects FF-A calls for communication between S-EL0 and SPMC.<BR>
-  #   FALSE - Selects SVC calls for communication between S-EL0 and SPMC.<BR>
-  # @Prompt Enable FF-A support.
-  gArmTokenSpaceGuid.PcdFfaEnable|FALSE|BOOLEAN|0x0000005B
-
 [PcdsFixedAtBuild.common]
   gArmTokenSpaceGuid.PcdTrustzoneSupport|FALSE|BOOLEAN|0x00000006
 
@@ -232,6 +225,13 @@
   # The default value is FALSE.
   #
   gArmTokenSpaceGuid.PcdUefiShellDefaultBootEnable|FALSE|BOOLEAN|0x0000052
+
+  ## Used to select method for requesting services from S-EL1.<BR><BR>
+  #   1  - Selects FF-A calls for communication between S-EL0 and SPMC.<BR>
+  #   0 - Selects SVC calls for communication between S-EL0 and SPMC.<BR>
+  #   Using unsigned integer as boolean does not work on assembler.
+  # @Prompt Enable FF-A support.
+  gArmTokenSpaceGuid.PcdFfaEnable|0|UINT32|0x0000005B
 
 [PcdsFixedAtBuild.common, PcdsPatchableInModule.common]
   gArmTokenSpaceGuid.PcdFdBaseAddress|0|UINT64|0x0000002B

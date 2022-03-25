@@ -54,7 +54,7 @@ SendMemoryPermissionRequest (
   }
 
   ArmCallSvc (SvcArgs);
-  if (FeaturePcdGet (PcdFfaEnable)) {
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
     // Get/Set memory attributes is an atomic call, with
     // StandaloneMm at S-EL0 being the caller and the SPM
     // core being the callee. Thus there won't be a
@@ -163,7 +163,7 @@ GetMemoryPermissions (
   // Prepare the message parameters.
   // See [1], Section 13.5.5.1 MM_SP_MEMORY_ATTRIBUTES_GET_AARCH64.
   ZeroMem (&SvcArgs, sizeof (ARM_SVC_ARGS));
-  if (FeaturePcdGet (PcdFfaEnable)) {
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
     // See [2], Section 10.2 FFA_MSG_SEND_DIRECT_REQ.
     SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
     SvcArgs.Arg1 = ARM_FFA_DESTINATION_ENDPOINT_ID;
@@ -218,7 +218,7 @@ RequestMemoryPermissionChange (
   // Prepare the message parameters.
   // See [1], Section 13.5.5.2 MM_SP_MEMORY_ATTRIBUTES_SET_AARCH64.
   ZeroMem (&SvcArgs, sizeof (ARM_SVC_ARGS));
-  if (FeaturePcdGet (PcdFfaEnable)) {
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
     // See [2], Section 10.2 FFA_MSG_SEND_DIRECT_REQ.
     SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
     SvcArgs.Arg1 = ARM_FFA_DESTINATION_ENDPOINT_ID;

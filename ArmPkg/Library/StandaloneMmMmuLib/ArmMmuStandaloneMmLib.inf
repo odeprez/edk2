@@ -23,7 +23,7 @@
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
 
-[FeaturePcd.ARM, FeaturePcd.AARCH64]
+[FixedPcd]
   gArmTokenSpaceGuid.PcdFfaEnable
 
 [LibraryClasses]

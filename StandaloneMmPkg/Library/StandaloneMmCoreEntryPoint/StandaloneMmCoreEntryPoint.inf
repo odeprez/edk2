@@ -51,7 +51,7 @@
   gEfiStandaloneMmNonSecureBufferGuid
   gEfiArmTfCpuDriverEpDescriptorGuid
 
-[FeaturePcd.ARM, FeaturePcd.AARCH64]
+[FixedPcd]
   gArmTokenSpaceGuid.PcdFfaEnable
 
 #

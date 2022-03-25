@@ -140,7 +140,7 @@ DelegatedEventLoop (
     DEBUG ((DEBUG_INFO, "X6 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg6));
     DEBUG ((DEBUG_INFO, "X7 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg7));
 
-    FfaEnabled = FeaturePcdGet (PcdFfaEnable);
+    FfaEnabled = FixedPcdGet32 (PcdFfaEnable != 0);
     if (FfaEnabled) {
       Status = CpuDriverEntryPoint (
                  EventCompleteSvcArgs->Arg0,
@@ -225,7 +225,7 @@ GetSpmVersion (
   UINT32        SpmVersion;
   ARM_SVC_ARGS  SpmVersionArgs;
 
-  if (FeaturePcdGet (PcdFfaEnable)) {
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
     SpmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;
     SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
     SpmVersionArgs.Arg1 |= mSpmMinorVerFfa;
@@ -293,7 +293,7 @@ InitArmSvcArgs (
   OUT INT32         *Ret
   )
 {
-  if (FeaturePcdGet (PcdFfaEnable)) {
+  if (FixedPcdGet32 (PcdFfaEnable) != 0) {
     InitMmFoundationSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
     InitMmFoundationSvcArgs->Arg1 = 0;
     InitMmFoundationSvcArgs->Arg2 = 0;
