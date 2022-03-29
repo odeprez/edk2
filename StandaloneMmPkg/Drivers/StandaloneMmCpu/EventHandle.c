@@ -141,7 +141,8 @@ PiMmStandaloneArmTfCpuDriverEntry (
   // between synchronous and asynchronous events.
   //
   if ((ARM_SMC_ID_MM_COMMUNICATE != EventId) &&
-      (ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ != EventId))
+      (ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ != EventId) &&
+      (ARM_SVC_ID_FFA_INTERRUPT_AARCH32 != EventId))
   {
     DEBUG ((DEBUG_ERROR, "UnRecognized Event - 0x%x\n", EventId));
     return EFI_INVALID_PARAMETER;

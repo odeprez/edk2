@@ -271,7 +271,12 @@ DelegatedEventLoop (
     }
 
     if (FfaEnabled) {
-      EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
+      if (ARM_SVC_ID_FFA_INTERRUPT_AARCH32 == EventCompleteSvcArgs->Arg0) {
+        // FFA v1.1 section 8.3 Secure interrupt completion mechanisms
+        EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_WAIT_AARCH32;
+      } else {
+        EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
+      }
       EventCompleteSvcArgs->Arg1 = ReceiverPartId << 16 | SenderPartId;
       EventCompleteSvcArgs->Arg2 = 0;
       EventCompleteSvcArgs->Arg3 = ARM_SVC_ID_SP_EVENT_COMPLETE;
