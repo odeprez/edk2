@@ -3254,6 +3254,11 @@ typedef struct {
 ///
 #define EFI_ACPI_6_5_XEN_PROJECT_TABLE_SIGNATURE  SIGNATURE_32('X', 'E', 'N', 'V')
 
+///
+/// "MPAM" Memory System Resource Partitioning and Monitoring Table
+///
+#define EFI_ACPI_MEMORY_SYSTEM_RESOURCE_PARTITIONING_AND_MONITORING_TABLE_SIGNATURE  SIGNATURE_32('M', 'P', 'A', 'M')
+
 #pragma pack()
 
 #endif
