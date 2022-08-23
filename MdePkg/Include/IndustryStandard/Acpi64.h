@@ -2,7 +2,11 @@
   ACPI 6.4 definitions from the ACPI Specification Revision 6.4 Jan, 2021.
 
   Copyright (c) 2017 - 2022, Intel Corporation. All rights reserved.<BR>
+<<<<<<< HEAD
   Copyright (c) 2019 - 2021, ARM Ltd. All rights reserved.<BR>
+=======
+  Copyright (c) 2019 - 2022, Arm Limited All rights reserved.<BR>
+>>>>>>> 9bd0e045ba44 (MdePkg: Add CEDT structure)
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -2833,6 +2837,49 @@ typedef struct {
 #define EFI_ACPI_6_4_PHAT_FIRMWARE_HEALTH_DATA_RECORD_UNKNOWN          0x02
 #define EFI_ACPI_6_4_PHAT_FIRMWARE_HEALTH_DATA_RECORD_ADVISORY         0x03
 
+/**
+ * CEDT structure members, which are common across all types of CEDT
+ * structures.
+**/
+typedef struct {
+  UINT8  Type;
+  UINT8  Reserved;
+  UINT16 Length;
+} EFI_ACPI_CEDT_HEADER;
+
+/**
+ * CXL Host Bridge Structure (CHBS), which describes a CXL Host Bridge.
+ * It identifies which version of CXL Host Bridge is supported and points
+ * to the register block, needed for programming HDM decoder.
+**/
+typedef struct {
+  EFI_ACPI_CEDT_HEADER  CedtHeader;
+  UINT32  UID;
+  UINT32  CXLVersion;
+  UINT32  Reserved;
+  UINT64  Base;
+  UINT64  Length;
+} EFI_ACPI_CEDT_CHBS_STRUCTURE;
+
+/**
+ * CXL Fixed Memory Window Structure (CFMWS), describes zero or more
+ * Host Physical Address (HPA) windows, which are associated with each
+ * CXL Host Bridge. Each window represents a contiguous HPA range that
+ * may be interleaved across one or more targets.
+**/
+typedef struct {
+  EFI_ACPI_CEDT_HEADER  CedtHeader;
+  UINT32  Reserved1;
+  UINT64  BaseHPA;
+  UINT64  WindowSize;
+  UINT8   ENIW;
+  UINT8   InterleaveArithmetic;
+  UINT16  Reserved2;
+  UINT32  HBIG;
+  UINT16  WindowRestrictions;
+  UINT16  QTGId;
+} EFI_ACPI_CEDT_CFMWS_STRUCTURE;
+
 //
 // Known table signatures
 //
@@ -3157,6 +3204,7 @@ typedef struct {
 ///
 #define EFI_ACPI_6_4_XEN_PROJECT_TABLE_SIGNATURE  SIGNATURE_32('X', 'E', 'N', 'V')
 
+#define EFI_ACPI_6_4_CEDT_SIGNATURE  SIGNATURE_32('C', 'E', 'D', 'T')
 #pragma pack()
 
 #endif
