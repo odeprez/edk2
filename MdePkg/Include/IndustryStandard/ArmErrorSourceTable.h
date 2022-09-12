@@ -2,7 +2,7 @@
   Arm Error Source Table as described in the
   'ACPI for the Armv8 RAS Extensions 1.1' Specification.
 
-  Copyright (c) 2020 Arm Limited.
+  Copyright (c) 2020 - 2022 Arm Limited.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Reference(s):
@@ -17,6 +17,8 @@
 
 #ifndef ARM_ERROR_SOURCE_TABLE_H_
 #define ARM_ERROR_SOURCE_TABLE_H_
+
+#include <IndustryStandard/Acpi.h>
 
 ///
 /// "AEST" Arm Error Source Table
