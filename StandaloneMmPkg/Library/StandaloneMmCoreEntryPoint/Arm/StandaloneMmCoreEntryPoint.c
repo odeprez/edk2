@@ -451,6 +451,8 @@ PopulateBootinformation (
   BOOLEAN FoundNsCommBuffer = FALSE;
   BOOLEAN FoundSharedBuffer = FALSE;
   BOOLEAN FoundHeap = FALSE;
+  UINT64 MemBase = 0;
+  UINT32 EntryPointOffset = 0;
   UINT32 PageSize;
 
   Offset = fdt_node_offset_by_compatible (DtbAddress, -1, "arm,ffa-manifest-1.0");
@@ -465,11 +467,18 @@ PopulateBootinformation (
       DtbAddress,
       Offset,
       "load-address",
-      &StmmBootInfo->SpMemBase
-      );
+      &MemBase);
   if (Status != EFI_SUCCESS) {
     return Status;
   }
+
+  Status = ReadProperty32(
+      DtbAddress,
+      Offset,
+      "entrypoint-offset",
+      &EntryPointOffset);
+
+  StmmBootInfo->SpMemBase = MemBase + EntryPointOffset;
   DEBUG ((DEBUG_INFO, "sp mem base  = 0x%llx\n", StmmBootInfo->SpMemBase));
 
   Status = ReadProperty64 (
