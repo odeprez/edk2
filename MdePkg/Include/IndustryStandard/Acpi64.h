@@ -2400,6 +2400,25 @@ typedef struct {
   UINT64                         Reserved;
 } EFI_ACPI_6_4_PLATFORM_COMMUNICATION_CHANNEL_TABLE_HEADER;
 
+typedef struct {
+  UINT32                        Length;
+  UINT32                        SBDF;
+  UINT16                        VendorID;
+  UINT16                        DeviceID;
+  UINT8                         RevID;
+  UINT8                         Reserved[3];
+} EFI_ACPI_6_4_VENDOR_ERROR_TYPE_EXTENSION_STRUCTURE;
+
+typedef struct {
+  UINT32                                                  ErrorType;
+  UINT32                                                  VendorStructureOffset;
+  UINT32                                                  Flags;
+  UINT32                                                  ProcessorId;
+  UINT64                                                  MemAddr;
+  UINT64                                                  MemAddrRange;
+  UINT32                                                  PcieSBDF;
+} EFI_ACPI_6_4_SET_ERROR_TYPE_WITH_ADDRESS;
+
 ///
 /// PCCT Version (as defined in ACPI 6.4 spec.)
 ///
