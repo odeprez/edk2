@@ -31,7 +31,8 @@ VOID
 EFIAPI
 ValidateErrorSourceFlags (
   IN UINT8 *Ptr,
-  IN VOID  *Context
+  IN VOID  *Context,
+  IN UINT32 Length
   )
 {
   if (*(UINT8 *)Ptr > 3) {
@@ -53,7 +54,8 @@ VOID
 EFIAPI
 ValidateEnabledField (
   IN UINT8 *Ptr,
-  IN VOID  *Context
+  IN VOID  *Context,
+  IN UINT32  Length
   )
 {
   if (*(UINT8 *)Ptr > 1) {
@@ -75,7 +77,8 @@ VOID
 EFIAPI
 ValidateNumOfRecordsToPreAllocate (
   IN UINT8 *Ptr,
-  IN VOID  *Context
+  IN VOID  *Context,
+  IN UINT32  Length
   )
 {
   if (*(UINT32 *)Ptr < 0) {
@@ -97,7 +100,8 @@ VOID
 EFIAPI
 ValidateMaxSectionsPerRecord (
   IN UINT8 *Ptr,
-  IN VOID  *Context
+  IN VOID  *Context,
+  IN UINT32  Length
   )
 {
   if (*(UINT32 *)Ptr < 0) {
@@ -117,7 +121,7 @@ VOID
 EFIAPI
 DumpNotificationStructure (
   IN CONST CHAR16 *Format OPTIONAL,
-  IN UINT8        *Ptr
+  IN UINT8        *Ptr,
   )
 {
   EFI_ACPI_6_3_HARDWARE_ERROR_NOTIFICATION_STRUCTURE *Attributes;

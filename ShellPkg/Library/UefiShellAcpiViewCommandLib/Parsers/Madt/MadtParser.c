@@ -30,13 +30,15 @@ STATIC ACPI_DESCRIPTION_HEADER_INFO  AcpiHdrInfo;
   @param [in] Ptr     Pointer to the start of the field data.
   @param [in] Context Pointer to context specific information e.g. this
                       could be a pointer to the ACPI table header.
+  @param [in] Length  Length of the field.
 **/
 STATIC
 VOID
 EFIAPI
 ValidateGICDSystemVectorBase (
-  IN UINT8  *Ptr,
-  IN VOID   *Context
+  IN UINT8   *Ptr,
+  IN VOID    *Context,
+  IN UINT32  Length
   )
 {
   if (*(UINT32 *)Ptr != 0) {
@@ -53,13 +55,15 @@ ValidateGICDSystemVectorBase (
   @param [in] Ptr     Pointer to the start of the field data.
   @param [in] Context Pointer to context specific information e.g. this
                       could be a pointer to the ACPI table header.
+  @param [in] Length  Length of the field.
 **/
 STATIC
 VOID
 EFIAPI
 ValidateSpeOverflowInterrupt (
-  IN UINT8  *Ptr,
-  IN VOID   *Context
+  IN UINT8   *Ptr,
+  IN VOID    *Context,
+  IN UINT32  Length
   )
 {
   UINT16  SpeOverflowInterrupt;
@@ -109,7 +113,8 @@ VOID
 EFIAPI
 ValidateTrbeInterrupt (
   IN UINT8  *Ptr,
-  IN VOID   *Context
+  IN VOID   *Context,
+  IN UINT32  Length
   )
 {
   UINT16  TrbeInterrupt;
