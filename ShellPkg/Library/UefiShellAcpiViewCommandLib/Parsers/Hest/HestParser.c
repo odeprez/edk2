@@ -122,6 +122,7 @@ EFIAPI
 DumpNotificationStructure (
   IN CONST CHAR16 *Format OPTIONAL,
   IN UINT8        *Ptr,
+  IN UINT32        Length
   )
 {
   EFI_ACPI_6_3_HARDWARE_ERROR_NOTIFICATION_STRUCTURE *Attributes;
