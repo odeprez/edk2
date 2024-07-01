@@ -36,7 +36,6 @@
 #define ARM_SVC_ID_FFA_ERROR_AARCH32                 0x84000060
 #define ARM_SVC_ID_FFA_ERROR_AARCH64                 0xC4000060
 #define ARM_SVC_ID_FFA_MSG_WAIT_AARCH32              0x8400006B
-#define ARM_SVC_ID_FFA_CONSOLE_LOG_AARCH64           0xC400008A
 
 /* Generic IDs when using AArch32 or AArch64 execution state */
 #ifdef MDE_CPU_AARCH64
